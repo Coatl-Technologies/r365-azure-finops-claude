@@ -1,0 +1,45 @@
+<!--
+    FinOps Guardrails for Claude API
+    This policy limits usage to prevent runaway costs from infinite loops
+    or aggressive automated scraping by internal teams.
+-->
+<policies>
+    <inbound>
+        <base />
+        
+        <!-- Inject Claude API Key stored in Azure Key Vault securely -->
+        <!-- In a real deployment, use {{anthropic-api-key}} from APIM Named Values linked to Key Vault -->
+        <set-header name="x-api-key" exists-action="override">
+            <value>{{anthropic-api-key}}</value>
+        </set-header>
+
+        <!-- FinOps: Rate Limiting by IP / Subscription -->
+        <!-- Limit to 50 requests per minute to prevent budget exhaustion -->
+        <rate-limit-by-key 
+            calls="50" 
+            renewal-period="60" 
+            counter-key="@(context.Subscription.Id)" 
+            increment-condition="@(context.Response.StatusCode >= 200 && context.Response.StatusCode < 400)" />
+        
+        <!-- FinOps: Quota by Subscription -->
+        <!-- Hard limit of 10,000 calls per month per team (subscription) -->
+        <quota-by-key 
+            calls="10000" 
+            renewal-period="2592000" 
+            counter-key="@(context.Subscription.Id)" />
+            
+        <!-- Enforce Model routing (Optional): Re-write request to force Claude Haiku if budget is low -->
+        <!-- <set-body template="liquid"> ... </set-body> -->
+    </inbound>
+    <backend>
+        <base />
+    </backend>
+    <outbound>
+        <base />
+        <!-- Log Token Usage to Application Insights / Datadog for Chargeback -->
+        <!-- Extract tokens from response body for cost attribution -->
+    </outbound>
+    <on-error>
+        <base />
+    </on-error>
+</policies>

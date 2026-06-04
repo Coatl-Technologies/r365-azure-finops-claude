@@ -10,13 +10,13 @@ This repository demonstrates how to provision secure, auditable, and financially
 
 ```mermaid
 graph TD
-    ClientApp["Consumer App (Client/Developer)"] -->|1. OAuth2 Request| EntraID["Azure Entra ID (Auth)"]
+    ClientApp["Consumer App Client/Developer"] -->|1. OAuth2 Request| EntraID["Azure Entra ID Auth"]
     EntraID -->|2. JWT Token| ClientApp
-    ClientApp -->|3. POST /chat (with Bearer Token)| APIM["Azure API Management Gateway"]
-    APIM -->|4. Validate Token & RBAC| APIM
-    APIM -->|5. Rate Limit & Quota Checks| APIM
-    APIM -.->|6. Retrieve API Key| KeyVault["Azure Key Vault (Secrets)"]
-    KeyVault -.->|7. API Key (Key Vault Secrets User Role)| APIM
+    ClientApp -->|3. POST /chat with Bearer Token| APIM["Azure API Management Gateway"]
+    APIM -->|4. Validate Token and RBAC| APIM
+    APIM -->|5. Rate Limit and Quota Checks| APIM
+    APIM -.->|6. Retrieve API Key| KeyVault["Azure Key Vault Secrets"]
+    KeyVault -.->|7. API Key Secrets User Role| APIM
     APIM -->|8. Forward Request with Key| Claude["Anthropic Claude API"]
 ```
 

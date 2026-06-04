@@ -10,12 +10,10 @@ Este documento detalla el **Roadmap de Evolución de 6 Fases (Épicas)** y las e
 
 ```mermaid
 graph TD
-    ClientApp["Consumer App (Client/Developer)"] -->|1. OAuth2 Request| EntraID["Azure Entra ID (Auth)"]
-    EntraID -->|2. JWT Token| ClientApp
-    ClientApp -->|3. POST /chat (with Bearer Token)| APIM["Azure API Management Gateway"]
+    ClientApp["Client Applications / Apps Cliente"] -->|POST /chat| APIM["Azure API Management Gateway"]
     
-    subgraph Governance ["AI Governance & Security Layer"]
-        DLP["Phase 5: DLP & PII Guardrails"]
+    subgraph Governance ["AI Governance and Security Layer"]
+        DLP["Phase 5: DLP and PII Guardrails"]
         Route["Phase 3: Intelligent Model Router"]
         Budget["Phase 3: Dollar-based Budgets"]
     end
@@ -24,17 +22,17 @@ graph TD
     DLP --> Route
     Route --> Budget
     
-    subgraph Backends ["Multi-Model Backends (Phase 2)"]
-        AOAI["Azure OpenAI (GPT-4o)"]
-        Claude["Anthropic Claude (Sonnet/Haiku)"]
-        Gemini["Google Gemini (Pro/Flash)"]
+    subgraph Backends ["Multi-Model Backends Phase 2"]
+        AOAI["Azure OpenAI GPT-4o"]
+        Claude["Anthropic Claude Sonnet and Haiku"]
+        Gemini["Google Gemini Pro and Flash"]
     end
     
     Budget -->|Route to Backend| AOAI
     Budget -->|Route to Backend| Claude
     Budget -->|Route to Backend| Gemini
     
-    subgraph Telemetry ["Observability & FinOps (Phase 1)"]
+    subgraph Telemetry ["Observability and FinOps Phase 1"]
         EventHub["Azure Event Hub / Log Analytics"]
         AppInsights["Azure Application Insights"]
         Workbook["Azure Workbook / Power BI"]
@@ -44,7 +42,7 @@ graph TD
     EventHub --> AppInsights
     AppInsights --> Workbook
     
-    subgraph Security ["Enterprise Security & Hardening (Phase 5)"]
+    subgraph Security ["Enterprise Security and Hardening Phase 5"]
         MI["Managed Identity"]
         PE["Private Endpoints"]
         KV["Azure Key Vault"]

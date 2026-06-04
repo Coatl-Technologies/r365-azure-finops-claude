@@ -1,8 +1,8 @@
 # 🗺️ Enterprise AI Gateway Platform: Evolution Roadmap | Ruta de Evolución de Plataforma AI Gateway
 
-This document outlines the **8-Phase Evolution Roadmap** to transform this repository from an infrastructure demonstration into a fully-fledged, production-ready **Enterprise AI Consumption Platform**.
+This document outlines the **6-Phase Evolution Roadmap (Epics)** and production-hardening strategies to transform this repository from an infrastructure demonstration into a fully-fledged, production-ready **Enterprise AI Consumption Platform**.
 
-Este documento detalla la **Ruta de Evolución en 8 Fases** para transformar este repositorio de una demostración de infraestructura a una **Plataforma de Consumo de IA Empresarial** lista para producción.
+Este documento detalla el **Roadmap de Evolución de 6 Fases (Épicas)** y las estrategias de hardening para transformar este repositorio de una demostración de infraestructura a una **Plataforma de Consumo de IA Empresarial** lista para producción.
 
 ---
 
@@ -10,15 +10,17 @@ Este documento detalla la **Ruta de Evolución en 8 Fases** para transformar est
 
 ```mermaid
 graph TD
-    UserApp["Client Applications / Apps Cliente"] -->|POST /chat| APIM["Azure API Management Gateway"]
+    ClientApp["Consumer App (Client/Developer)"] -->|1. OAuth2 Request| EntraID["Azure Entra ID (Auth)"]
+    EntraID -->|2. JWT Token| ClientApp
+    ClientApp -->|3. POST /chat (with Bearer Token)| APIM["Azure API Management Gateway"]
     
     subgraph Governance ["AI Governance & Security Layer"]
-        DLP["Phase 7: DLP & PII Guardrails"]
+        DLP["Phase 5: DLP & PII Guardrails"]
         Route["Phase 3: Intelligent Model Router"]
-        Budget["Phase 4: Dollar-based Budgets"]
+        Budget["Phase 3: Dollar-based Budgets"]
     end
     
-    APIM --> DLP
+    APIM -->|Validate JWT Token| DLP
     DLP --> Route
     Route --> Budget
     
@@ -28,21 +30,21 @@ graph TD
         Gemini["Google Gemini (Pro/Flash)"]
     end
     
-    Budget -->|Route to| AOAI
-    Budget -->|Route to| Claude
-    Budget -->|Route to| Gemini
+    Budget -->|Route to Backend| AOAI
+    Budget -->|Route to Backend| Claude
+    Budget -->|Route to Backend| Gemini
     
-    subgraph Telemetry ["Observability & FinOps (Phase 1 & 8)"]
+    subgraph Telemetry ["Observability & FinOps (Phase 1)"]
         EventHub["Azure Event Hub / Log Analytics"]
         AppInsights["Azure Application Insights"]
-        ML["Phase 8: Cost Prediction (Prophet/ARIMA)"]
+        Workbook["Azure Workbook / Power BI"]
     end
     
-    APIM -->|Stream Logs| EventHub
+    APIM -->|Asynchronous Stream| EventHub
     EventHub --> AppInsights
-    AppInsights --> ML
+    AppInsights --> Workbook
     
-    subgraph Security ["Enterprise Security (Phase 6)"]
+    subgraph Security ["Enterprise Security & Hardening (Phase 5)"]
         MI["Managed Identity"]
         PE["Private Endpoints"]
         KV["Azure Key Vault"]
@@ -54,13 +56,20 @@ graph TD
 
 ---
 
-## 🛠️ The 8-Phase Evolution | Las 8 Fases de Evolución
+## 🛠️ The 6-Phase Evolution (Epics) | Las 6 Épicas de Evolución
 
-### 📊 Phase 1: Real Observability & FinOps Telemetry | Observabilidad Real y Telemetría FinOps
+### 🏗️ Phase 0: Current Foundation | Base Actual (IaC & Basic Limits)
+The starting point of the platform, as defined in this repository.
+*   **IaC:** Declarative resources in Terraform defining Azure API Management (APIM) and Key Vault.
+*   **Security:** Static Key Vault key injection (Key Vault Linked Named Values).
+*   **Controls:** Basic Rate Limiting (50 calls/min) and Quotas (10,000 requests/month) enforced at the APIM policy level.
 
-Currently, the platform logs basic HTTP traffic. The goal is to capture **token-level usage** and attribute exact costs per request for chargeback.
+---
 
-Actualmente, la plataforma registra tráfico HTTP básico. El objetivo es capturar el **uso a nivel de tokens** y atribuir costos exactos por petición para permitir el chargeback.
+### 📊 Phase 1: Token-Level Observability | Observabilidad a Nivel de Tokens
+Currently, the platform logs basic HTTP traffic. This Epic focuses on capturing token counts (input/output) and exact costs per request for chargeback.
+
+Esta Épica se enfoca en capturar el conteo de tokens (entrada/salida) y el costo exacto por petición para permitir el chargeback.
 
 #### 1. Metric JSON Schema | Esquema JSON de Métricas
 For every request, the gateway extracts metadata and token metrics:
@@ -76,7 +85,7 @@ For every request, the gateway extracts metadata and token metrics:
 ```
 
 #### 2. APIM Implementation Strategy | Estrategia de Implementación en APIM
-We will use APIM's `<log-to-eventhub>` policy to asynchronously stream request and response payloads to Azure Event Hubs without impacting latency, which then routes them to Log Analytics and Application Insights:
+We use APIM's `<log-to-eventhub>` policy to asynchronously stream request and response payloads to Azure Event Hubs without impacting latency, which then routes them to Log Analytics and Application Insights:
 ```xml
 <outbound>
     <base />
@@ -89,139 +98,104 @@ We will use APIM's `<log-to-eventhub>` policy to asynchronously stream request a
 
 ---
 
-### 🌐 Phase 2: Multi-Provider Gateway (Azure OpenAI + Anthropic + Gemini) | Gateway Multi-Proveedor
+### 🌐 Phase 2: Multi-Model Routing & Entra ID | Enrutamiento Multi-Modelo y Autenticación Entra ID
+Enterprise applications require vendor neutrality and secure, standardized authentication. The AI Gateway exposes a single, unified `/chat` endpoint.
 
-Enterprise applications require vendor neutrality. The AI Gateway will expose a standardized `/chat` endpoint and abstract the underlying providers.
+Las aplicaciones empresariales requieren neutralidad de proveedor y autenticación segura y estandarizada. El AI Gateway expondrá un endpoint `/chat` unificado.
 
-Las aplicaciones empresariales requieren neutralidad de proveedor. El AI Gateway expondrá un endpoint `/chat` estandarizado y abstraerá los proveedores subyacentes.
+```text
+User / App
+  ├─ Authenticates against Azure Entra ID (OAuth2 Client Credentials Flow)
+  ├─ Obtains JWT Access Token
+  └─ Sends request to APIM: POST /chat (with Authorization: Bearer JWT)
+```
 
-*   **Client interface:** Sends standard JSON requests to `/chat`.
-*   **Routing logic:** APIM inspects headers (e.g., `X-Team-Identity`) or the body payload and forwards the request to the target backend:
+Inside APIM:
+*   **Validate JWT Token:** Enforces authentication and checks claims using `<validate-jwt>` policy.
+*   **Routing Logic:** APIM inspects the request payload and forwards it:
     *   `team: finance` $\rightarrow$ Routes to **Azure OpenAI (GPT-4o)**
     *   `team: support` $\rightarrow$ Routes to **Anthropic Claude Haiku** (Cost-efficient)
     *   `team: engineering` $\rightarrow$ Routes to **Anthropic Claude Sonnet**
 
 ---
 
-### 🧠 Phase 3: Intelligent Model Routing | Enrutamiento Inteligente de Modelos
+### 🧠 Phase 3: Budget Enforcement & Intelligent Routing | Presupuestos y Enrutamiento Inteligente
+Transitioning from request counts to dollar-based budgets because token usage drives the actual API bill, combined with cost-optimization routing based on prompt sizes.
 
-Optimize costs automatically by evaluating prompt complexity (e.g., token size) before dispatching the request to the most expensive models.
+Transición de cuotas por llamadas a presupuestos basados en dólares, combinado con enrutamiento de optimización de costos según el tamaño del prompt.
 
-Optimiza costos automáticamente evaluando la complejidad del prompt (ej. cantidad de tokens) antes de despachar la solicitud a los modelos más costosos.
-
-```python
-# Conceptual Gateway Routing Logic
-if prompt_tokens < 500:
-    route_to("claude-3-haiku")      # Ultra-cheap for simple queries
-elif prompt_tokens < 5000:
-    route_to("claude-3-5-sonnet")  # Standard balanced option
-else:
-    route_to("claude-3-opus")       # Advanced reasoning tasks only
-```
-
-Inside APIM, this is achieved by checking the `Content-Length` or using a lightweight script to estimate token lengths within an inbound XML policy before backend selection.
-
----
-
-### 💵 Phase 4: Dollar-Based Budgets & Quotas | Presupuestos por Equipo Basados en Dólares
-
-Transitioning from "requests per month" to "dollars per month" because token consumption determines the actual API bill.
-
-Transición de "peticiones por mes" a "dólares por mes" ya que el consumo de tokens determina la factura real de la API.
-
+#### 1. Dollar-based budgets:
 *   **Marketing Budget:** $\$500$/month.
 *   **Engineering Budget:** $\$3,000$/month.
 *   **Finance Budget:** $\$1,000$/month.
+*   **Throttling & Alerts Flow:** Webhook alerts sent to **Microsoft Teams** / **Slack** or **ServiceNow** at 80% consumption; APIM dynamically throttles requests with a `403 Forbidden (Budget Exhausted)` at 100% consumption.
 
-#### Throttling & Alerts Flow:
-1.  **At 80% Budget Consumed:** Trigger alerts via Webhooks to **Microsoft Teams**, **Slack**, or **ServiceNow** using Azure Logic Apps.
-2.  **At 100% Budget Consumed:** APIM dynamically overrides the backend response and throttles requests with a `403 Forbidden (Budget Exhausted)`.
+#### 2. Intelligent Routing Logic:
+```python
+# Conceptual Gateway Routing
+if prompt_tokens < 500:
+    route_to("claude-3-haiku")      # Low-cost for simple queries
+elif prompt_tokens < 5000:
+    route_to("claude-3-5-sonnet")  # Balanced reasoning
+else:
+    route_to("claude-3-opus")       # Heavy reasoning
+```
 
 ---
 
-### 🚀 Phase 5: Developer Self-Service Platform (Internal Developer Portal) | Plataforma Self-Service para Desarrolladores
+### 🚀 Phase 4: Self-Service Platform (Internal Developer Portal) | Plataforma Self-Service para Desarrolladores
+To eliminate infrastructure bottlenecks, developer teams request AI credentials via a self-service portal (e.g., **Spotify Backstage** or Azure Developer CLI).
 
-To eliminate infrastructure bottlenecks, developer teams can request AI credentials via a self-service portal (e.g., **Spotify Backstage** or Azure Developer CLI).
-
-Para eliminar cuellos de botella de infraestructura, los desarrolladores pueden solicitar credenciales de IA a través de un portal self-service (ej. **Spotify Backstage**).
+Para eliminar cuellos de botella, los equipos de desarrollo solicitan credenciales de IA a través de un portal self-service (ej. **Spotify Backstage**).
 
 ```text
-Developer Form:
+Developer Request:
   - Team: Finance
-  - Model: Claude 3.5 Sonnet
+  - Model Required: Claude 3.5 Sonnet
   - Environment: Production
 ```
 
-Upon form submission, a GitOps pipeline automatically runs Terraform to provision:
+Upon form approval, a GitOps pipeline automatically runs Terraform to provision:
 1.  A dedicated **APIM Subscription**.
 2.  A corresponding **APIM Product** configuration.
-3.  An **Azure Key Vault Secret** (if custom keys are needed).
+3.  An **Azure Key Vault Secret** configuration.
 4.  Appropiate XML Policy attachment.
 
 ---
 
-### 🔒 Phase 6: Enterprise Security hardening | Seguridad Empresarial Robusta
+### 🛡️ Phase 5: Responsible AI & Network Hardening | IA Responsable y Hardening de Red
+Securing the AI Gateway for highly regulated environments (SOC 2 Type II / SOX compliance) and protecting against PII leakage.
 
-Securing the AI Gateway for highly regulated environments (SOC 2 Type II / SOX compliance).
+Asegurando el AI Gateway para entornos altamente regulados y protegiendo contra fugas de datos sensibles (PII).
 
-Asegurando el AI Gateway para entornos altamente regulados (cumplimiento de SOC 2 Tipo II / SOX).
-
-#### 1. System-Assigned Managed Identity
-We eliminate static credentials between APIM and Azure Key Vault. APIM is assigned a Managed Identity with the **Key Vault Secrets User** role.
-```hcl
-# main.tf resource adjustment
-resource "azurerm_key_vault_access_policy" "apim_policy" {
-  key_vault_id = azurerm_key_vault.kv.id
-  tenant_id    = data.azurerm_client_config.current.tenant_id
-  object_id    = azurerm_api_management.apim.identity[0].principal_id
-
-  secret_permissions = ["Get", "List"]
-}
-```
-
-#### 2. Private Endpoints
-All traffic between the consumer application, APIM, Key Vault, and Azure OpenAI flows through private virtual networks using **Private Endpoints**, ensuring zero public internet exposure.
-
-Todo el tráfico entre la aplicación, el APIM, Key Vault y Azure OpenAI fluye a través de redes virtuales privadas usando **Private Endpoints**, garantizando cero exposición a internet público.
+*   **Managed Identity:** Eliminate static credentials. APIM is assigned a System-Assigned Managed Identity with the **Key Vault Secrets User** role to retrieve keys dynamically.
+*   **Private Endpoints:** All traffic flows through private virtual networks using Private Endpoints, ensuring zero public internet exposure.
+*   **DLP & Prompt Inspection:** APIM XML policies inspect the inbound payload and use Regex to detect/redact sensitive data (Credit Cards, SSN, tokens) before forwarding to LLM providers.
 
 ---
 
-### 🛡️ Phase 7: Responsible AI & DLP Guardrails | IA Responsable y DLP
+## 🏛️ Production Hardening (Consulting Grade) | Nivel de Consultoría Enterprise
 
-Inspecting request prompts and model responses at the gateway layer to block sensitive data leakage (PII) before it leaves the corporate perimeter.
+To present this platform as a production-ready solution that large enterprises would invest in, we incorporate these core elements:
 
-Inspeccionar los prompts y respuestas en la capa del gateway para bloquear fugas de datos sensibles (PII) antes de que salgan del perímetro corporativo.
+### 1. FinOps Cost Dashboard (Power BI / Azure Workbook)
+A centralized dashboard connected to our Event Hub Log Stream, showing:
+*   **Spend by Team:** Clear visualization for chargeback.
+*   **Spend by Model:** Visualizing cost impact of Sonnet vs Haiku vs GPT-4o.
+*   **Token Efficiency:** Tracks Cache Hit ratio vs Raw Token cost.
+*   **Forecast Spend:** Linear extrapolation models indicating if any team is projected to exceed their monthly budget.
 
-*   **APIM Inbound Regex Inspection:** Detect and redact:
-    *   Social Security Numbers (SSN) / CURP.
-    *   Credit Card Numbers.
-    *   Passwords / Tokens.
-*   **Responsible AI Policy:** Block offensive or out-of-bounds prompts using pre-compiled rules or routing to Azure AI Content Safety APIs.
+### 2. Log Analytics & Azure Policy
+*   **Compliance Audit:** Enforce retention periods on Log Analytics for every prompt transaction (excluding redacted PII).
+*   **Azure Policy:** Enforce that no APIM instances can be deployed without Private Endpoints, and require that Key Vault purge protection is enabled.
 
----
+### 3. APIM Developer Portal
+*   Provide interactive, self-updating API documentation.
+*   Enable developers to test their API credentials against the `/chat` endpoint directly in the browser sandbox.
 
-### 🔮 Phase 8: ML-Based Cost Prediction | Predicción de Costos con Machine Learning
-
-Leveraging historic FinOps logs to train models that forecast monthly AI expenses.
-
-Aprovechar los logs históricos de FinOps para entrenar modelos que pronostiquen los gastos mensuales en IA.
-
-*   **Data Pipeline:** Stream Event Hub logs to an **Azure Data Lake**.
-*   **Training Script:** Python-based forecasting using **Prophet** or **ARIMA** models inside **Azure Machine Learning**.
-*   **Predictive Dashboard:**
-    *   `Current Spend: $10,230`
-    *   `Projected Month-End Spend: $14,500` (Flags alerts if it exceeds the budgeted $12,000 threshold).
-
----
-
-## 📈 LinkedIn & Resume Pitch | Discurso para LinkedIn y Currículum
-
-Here is how to represent the design and potential of this platform on your professional profile:
-
-Aquí tienes cómo representar el diseño y potencial de esta plataforma en tu perfil profesional:
-
-> **Designed and implemented an enterprise AI Gateway platform on Azure using Terraform, API Management, Key Vault, and Azure DevOps, enabling secure, governed, and cost-controlled access to Anthropic Claude models.**
-> 
-> *Implemented FinOps controls including rate limiting, quota enforcement, centralized credential management, chargeback telemetry, and CI/CD automation, providing a scalable foundation for multi-team Generative AI adoption.*
-> 
-> *Architected the platform to support future multi-model routing, AI governance policies, observability, and budget enforcement across enterprise workloads.*
+### 4. Modular Terraform (DRY)
+*   Refactoring the monolithic Terraform structure into reusable modules:
+    *   `modules/apim/` — Manages gateway, endpoints, and policies.
+    *   `modules/keyvault/` — Manages secret storage and access policies.
+    *   `modules/networking/` — Manages VNets, subnets, and Private Endpoints.
+*   Enables multi-environment deployments (`dev`, `staging`, `prod`) using parameterized workspace variables.

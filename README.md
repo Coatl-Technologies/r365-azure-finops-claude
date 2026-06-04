@@ -6,6 +6,32 @@ This repository demonstrates how to provision secure, auditable, and financially
 
 ---
 
+## 📐 Architecture Diagram | Diagrama de Arquitectura
+
+```mermaid
+graph TD
+    ClientApp["Consumer App (Client/Developer)"] -->|1. OAuth2 Request| EntraID["Azure Entra ID (Auth)"]
+    EntraID -->|2. JWT Token| ClientApp
+    ClientApp -->|3. POST /chat (with Bearer Token)| APIM["Azure API Management Gateway"]
+    APIM -->|4. Validate Token & RBAC| APIM
+    APIM -->|5. Rate Limit & Quota Checks| APIM
+    APIM -.->|6. Retrieve API Key| KeyVault["Azure Key Vault (Secrets)"]
+    KeyVault -.->|7. API Key (Key Vault Secrets User Role)| APIM
+    APIM -->|8. Forward Request with Key| Claude["Anthropic Claude API"]
+```
+
+---
+
+## 💼 Business Value | Valor de Negocio
+
+| Element | English | Español |
+| :--- | :--- | :--- |
+| **Problem** | Uncontrolled AI spending, raw credentials exposure, and lack of consumption tracking. | Gasto descontrolado en APIs de IA, exposición de claves crudas y falta de seguimiento del consumo. |
+| **Solution** | Centralized Enterprise AI Gateway. | AI Gateway Centralizado y Empresarial. |
+| **Results** | • Prevent credential leakage<br>• Limit runaway costs (429/Throttle)<br>• Enable team chargebacks<br>• Standardize AI consumption | • Evita la fuga de credenciales<br>• Limita costos desbocados (429/Throttling)<br>• Habilita chargebacks por equipo<br>• Estandariza el acceso a la IA |
+
+---
+
 ## 🎯 Executive Summary | Resumen Ejecutivo
 
 Organizations are accelerating their adoption of Generative AI. However, providing direct access to LLM APIs creates critical operational risks: | Las organizaciones buscan acelerar su adopción de IA Generativa. Sin embargo, dar acceso directo a las APIs de los LLMs genera riesgos operativos críticos:
@@ -40,14 +66,20 @@ Configured to limit consumption to **10,000 calls per month** per team, protecti
 ### 3. Smart Caching and Routing (Future | Caching y Enrutamiento Inteligente)
 *   **Prompt Caching:** In phase 2, APIM can intercept similar requests and use context caching to reduce "Input Tokens" cost. | En fase 2, el APIM puede interceptar solicitudes similares usando caché de contexto para reducir el costo de "Input Tokens".
 *   **Haiku vs Opus:** The gateway can route simple requests to Claude 3 Haiku (cheaper) and reserve Claude 3.5 Sonnet or Opus for intensive reasoning workloads. | El gateway puede rutear peticiones simples a Claude 3 Haiku y reservar Sonnet u Opus para cargas intensivas.
-
----
-
 ## 🗺️ Enterprise Evolution Roadmap | Ruta de Evolución Empresarial
 
-This repository represents Phase 0 (Foundation) of an enterprise AI Gateway. To see the full architectural design for scaling this to production with multi-model routing, token chargebacks, dollar-based budgets, and advanced enterprise security, read our **[Enterprise Evolution Roadmap](ROADMAP_ENTERPRISE.md)**.
+This repository represents the initial foundation. The platform is designed to scale across the following architectural Epics:
+Este repositorio representa la base inicial. La plataforma está diseñada para escalar a través de las siguientes Épicas arquitectónicas:
 
-Este repositorio representa la Fase 0 (Base) de un AI Gateway empresarial. Para ver el diseño arquitectónico completo para escalar esto a producción con ruteo multi-modelo, chargeback de tokens, presupuestos en dólares y seguridad empresarial avanzada, lee nuestra **[Ruta de Evolución Empresarial](ROADMAP_ENTERPRISE.md)**.
+*   **Phase 0: Current Foundation | Base Actual** - IaC for APIM gateway + limits.
+*   **Phase 1: Token Observability | Observabilidad de Tokens** - Real chargeback & metrics via Event Hub.
+*   **Phase 2: Multi-Model Routing & Entra ID | Enrutamiento Multi-Modelo y Entra ID** - Unified `/chat` endpoint + Azure Entra ID OAuth2 authentication.
+*   **Phase 3: Budget & Intelligent Routing | Presupuestos y Enrutamiento Inteligente** - Dollar-based quotas + prompt size router (Haiku vs Sonnet).
+*   **Phase 4: Self-Service Platform | Plataforma Self-Service** - Backstage-style GitOps portal to request credentials.
+*   **Phase 5: Responsible AI & Hardening | IA Responsable y Seguridad** - PII/DLP inspection + Private Endpoints.
+
+To see the full architectural specification of these phases, read the **[Enterprise Evolution Roadmap](ROADMAP_ENTERPRISE.md)**.
+Para ver la especificación arquitectónica completa de estas fases, lee el **[Roadmap de Evolución Empresarial](ROADMAP_ENTERPRISE.md)**.
 
 ---
 

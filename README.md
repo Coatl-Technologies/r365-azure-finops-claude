@@ -43,6 +43,14 @@ Configured to limit consumption to **10,000 calls per month** per team, protecti
 
 ---
 
+## 🗺️ Enterprise Evolution Roadmap | Ruta de Evolución Empresarial
+
+This repository represents Phase 0 (Foundation) of an enterprise AI Gateway. To see the full architectural design for scaling this to production with multi-model routing, token chargebacks, dollar-based budgets, and advanced enterprise security, read our **[Enterprise Evolution Roadmap](ROADMAP_ENTERPRISE.md)**.
+
+Este repositorio representa la Fase 0 (Base) de un AI Gateway empresarial. Para ver el diseño arquitectónico completo para escalar esto a producción con ruteo multi-modelo, chargeback de tokens, presupuestos en dólares y seguridad empresarial avanzada, lee nuestra **[Ruta de Evolución Empresarial](ROADMAP_ENTERPRISE.md)**.
+
+---
+
 ## 🚀 Step-by-Step Guide | Guía Paso a Paso
 
 ### Repository Structure | Estructura del Repositorio
@@ -66,6 +74,20 @@ r365-azure-finops-claude/
 2. **Create the Pipeline:** In Azure DevOps, create a new pipeline pointing to the `pipelines/azure-pipelines.yml` file in this repository. | Crea un nuevo pipeline apuntando al archivo `pipelines/azure-pipelines.yml`.
 3. **Configure the Terraform Backend:** Create an Azure Storage Account named `tfstatestoragecoatl` inside a Resource Group `tfstate-rg` to store the state. | Crea un Storage Account en Azure llamado `tfstatestoragecoatl` dentro de `tfstate-rg` para el estado.
 4. **Push & Deploy:** Upon merging to `main`, the pipeline runs the `Plan` stage. After review, the `Apply` executes. | Al hacer merge a `main`, se ejecuta el `Plan`. Tras la revisión, se ejecutará el `Apply`.
+
+---
+
+## 📈 Professional Pitch | Discurso Profesional
+
+This project demonstrates practical skills in **Platform Engineering**, **AI Governance**, and **FinOps for LLMs**. You can describe this project on your LinkedIn or Resume as follows:
+
+Este proyecto demuestra habilidades prácticas en **Platform Engineering**, **Gobernanza de IA** y **FinOps para LLMs**. Puedes describir este proyecto en tu LinkedIn o Currículum de la siguiente manera:
+
+> **Designed and implemented an enterprise AI Gateway platform on Azure using Terraform, API Management, Key Vault, and Azure DevOps, enabling secure, governed, and cost-controlled access to Anthropic Claude models.**
+> 
+> *Implemented FinOps controls including rate limiting, quota enforcement, centralized credential management, chargeback telemetry, and CI/CD automation, providing a scalable foundation for multi-team Generative AI adoption.*
+> 
+> *Architected the platform to support future multi-model routing, AI governance policies, observability, and budget enforcement across enterprise workloads.*
 
 ---
 *Designed with a focus on Security, Reliability, and FinOps. | Diseñado con foco en Seguridad, Confiabilidad y FinOps.*

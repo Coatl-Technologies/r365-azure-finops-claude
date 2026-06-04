@@ -1,71 +1,71 @@
-# R365 Azure FinOps para Claude AI
+# R365 Azure FinOps for Claude AI | R365 Azure FinOps para Claude AI
 
-Bienvenido al repositorio de **Platform Engineering** enfocado en Gobernanza y FinOps para modelos de inteligencia artificial (LLMs).
+Welcome to the **Platform Engineering** repository focused on AI Governance and FinOps for Large Language Models (LLMs). | Bienvenido al repositorio de **Platform Engineering** enfocado en Gobernanza y FinOps para modelos de inteligencia artificial (LLMs).
 
-Este repositorio fue diseñado para demostrar cómo aprovisionar infraestructura segura, auditable y financieramente controlada para que usuarios de negocio consuman **Claude AI (Anthropic)** sobre Microsoft Azure.
-
----
-
-## 🎯 Resumen Ejecutivo (Executive Summary)
-
-Las organizaciones buscan acelerar su adopción de IA Generativa. Sin embargo, dar acceso directo a las APIs de los LLMs genera riesgos operativos críticos:
-1. **Riesgo Financiero:** Loops infinitos en código o uso desproporcionado que agota el presupuesto.
-2. **Riesgo de Seguridad:** Credenciales dispersas y exposición de tráfico sin auditar.
-3. **Complejidad de Plataforma:** Carga cognitiva alta para los desarrolladores.
-
-### La Solución
-Implementar **Azure API Management (APIM)** como el "AI Gateway" central. Todas las aplicaciones envían sus peticiones al APIM, el cual inyecta la clave maestra de Claude de forma segura desde **Azure Key Vault**, impone cuotas estrictas de tokens (Rate Limiting) y reporta la telemetría de costos a los dashboards de observabilidad (Datadog/Application Insights) para permitir el *Chargeback* entre equipos.
+This repository demonstrates how to provision secure, auditable, and financially controlled infrastructure for business users to consume **Claude AI (Anthropic)** on Microsoft Azure. | Este repositorio demuestra cómo aprovisionar infraestructura segura, auditable y financieramente controlada para consumir **Claude AI (Anthropic)** sobre Microsoft Azure.
 
 ---
 
-## 🏗️ Arquitectura de la Solución
+## 🎯 Executive Summary | Resumen Ejecutivo
 
-1. **Infraestructura como Código (IaC):** `Terraform` para definir de manera inmutable todo el stack en Azure.
-2. **CI/CD:** `Azure DevOps` Pipelines para automatizar el `plan` y `apply` con gates de aprobación.
-3. **AI Gateway:** `Azure API Management` para enrutamiento, limits y FinOps.
-4. **Almacenamiento de Secretos:** `Azure Key Vault` que evita la fuga de la API Key de Anthropic.
+Organizations are accelerating their adoption of Generative AI. However, providing direct access to LLM APIs creates critical operational risks: | Las organizaciones buscan acelerar su adopción de IA Generativa. Sin embargo, dar acceso directo a las APIs de los LLMs genera riesgos operativos críticos:
+1. **Financial Risk | Riesgo Financiero:** Infinite loops in code or disproportionate usage that drains the budget. | Loops infinitos en código o uso desproporcionado que agota el presupuesto.
+2. **Security Risk | Riesgo de Seguridad:** Scattered credentials and unaudited traffic exposure. | Credenciales dispersas y exposición de tráfico sin auditar.
+3. **Platform Complexity | Complejidad de Plataforma:** High cognitive load for developers. | Carga cognitiva alta para los desarrolladores.
 
----
-
-## 💰 Análisis de Costos (FinOps)
-
-La configuración de este repositorio protege el presupuesto a través de tres pilares:
-
-### 1. Hard Limits (Protección contra Bugs)
-La política XML inyectada en el APIM restringe el consumo a un máximo de **50 peticiones por minuto por Suscripción de Equipo**. Si un usuario desencadena un "retry storm" o un bucle infinito, el API Gateway bloquea la petición (`429 Too Many Requests`) antes de llegar a los servidores de Claude, salvando miles de dólares.
-
-### 2. Cuotas Mensuales (Budgeting)
-Configurado para limitar el consumo a **10,000 llamadas al mes** por equipo, protegiendo contra scraping abusivo y garantizando distribución justa del presupuesto.
-
-### 3. Caching y Enrutamiento Inteligente (Futuro)
-*   **Prompt Caching:** En una fase 2, el APIM puede interceptar solicitudes similares y usar la caché de contexto para reducir el costo de "Input Tokens".
-*   **Haiku vs Opus:** El gateway puede rutear peticiones simples a Claude 3 Haiku (más económico) y reservar Claude 3.5 Sonnet u Opus para cargas intensivas de razonamiento.
+### The Solution | La Solución
+Implement **Azure API Management (APIM)** as the central "AI Gateway". All applications route requests to APIM, which securely injects the Claude master key from **Azure Key Vault**, enforces strict token quotas (Rate Limiting), and reports cost telemetry to observability dashboards (Datadog/Application Insights) for team Chargeback. | Implementar **Azure API Management (APIM)** como el "AI Gateway" central. Las aplicaciones envían peticiones al APIM, el cual inyecta la clave maestra desde **Azure Key Vault**, impone cuotas estrictas de tokens (Rate Limiting) y reporta telemetría de costos a los dashboards (Datadog/App Insights) para permitir el Chargeback entre equipos.
 
 ---
 
-## 🚀 Guía Paso a Paso (Scaffolding)
+## 🏗️ Solution Architecture | Arquitectura de la Solución
 
-### Estructura del Repositorio
+1. **Infrastructure as Code (IaC):** `Terraform` to immutably define the entire Azure stack. | `Terraform` para definir de manera inmutable todo el stack en Azure.
+2. **CI/CD:** `Azure DevOps` Pipelines to automate the `plan` and `apply` with approval gates. | Pipelines para automatizar el `plan` y `apply` con gates de aprobación.
+3. **AI Gateway:** `Azure API Management` for routing, limits, and FinOps. | `Azure API Management` para enrutamiento, limits y FinOps.
+4. **Secret Storage:** `Azure Key Vault` to prevent Anthropic API Key leakage. | `Azure Key Vault` que evita la fuga de la API Key de Anthropic.
+
+---
+
+## 💰 Cost Analysis (FinOps) | Análisis de Costos
+
+This repository setup protects the budget through three pillars: | La configuración protege el presupuesto a través de tres pilares:
+
+### 1. Hard Limits (Bug Protection | Protección contra Bugs)
+The XML policy injected into APIM restricts consumption to a maximum of **50 requests per minute per Team Subscription**. If a user triggers a "retry storm" or infinite loop, the API Gateway blocks the request (`429 Too Many Requests`) before reaching Claude's servers, saving thousands of dollars. | La política XML en el APIM restringe el consumo a **50 peticiones por minuto por Suscripción de Equipo**. Si hay un "retry storm", el Gateway bloquea la petición (`429 Too Many Requests`) antes de llegar a Claude, salvando miles de dólares.
+
+### 2. Monthly Quotas (Budgeting | Cuotas Mensuales)
+Configured to limit consumption to **10,000 calls per month** per team, protecting against abusive scraping and ensuring fair budget distribution. | Configurado para limitar el consumo a **10,000 llamadas al mes** por equipo, protegiendo contra scraping abusivo y garantizando distribución justa.
+
+### 3. Smart Caching and Routing (Future | Caching y Enrutamiento Inteligente)
+*   **Prompt Caching:** In phase 2, APIM can intercept similar requests and use context caching to reduce "Input Tokens" cost. | En fase 2, el APIM puede interceptar solicitudes similares usando caché de contexto para reducir el costo de "Input Tokens".
+*   **Haiku vs Opus:** The gateway can route simple requests to Claude 3 Haiku (cheaper) and reserve Claude 3.5 Sonnet or Opus for intensive reasoning workloads. | El gateway puede rutear peticiones simples a Claude 3 Haiku y reservar Sonnet u Opus para cargas intensivas.
+
+---
+
+## 🚀 Step-by-Step Guide | Guía Paso a Paso
+
+### Repository Structure | Estructura del Repositorio
 
 ```text
 r365-azure-finops-claude/
 ├── pipelines/
-│   └── azure-pipelines.yml      # CI/CD para Azure DevOps
+│   └── azure-pipelines.yml      # CI/CD for Azure DevOps
 ├── terraform/
-│   ├── main.tf                  # APIM y Key Vault resource definitions
+│   ├── main.tf                  # APIM & Key Vault resource definitions
 │   ├── providers.tf             # Azure provider config
-│   ├── variables.tf             # Variables parametrizables
+│   ├── variables.tf             # Parameterizable variables
 │   └── policies/
-│       └── apim-claude-policy.xml # Política FinOps y Rate Limiting
-└── README.md                    # Esta documentación
+│       └── apim-claude-policy.xml # FinOps & Rate Limiting Policy
+└── README.md                    # This documentation | Esta documentación
 ```
 
-### ¿Cómo Desplegar?
+### How to Deploy? | ¿Cómo Desplegar?
 
-1. **Configurar el Service Connection:** En Azure DevOps, crea un Service Connection hacia tu suscripción de Azure y llámalo `coatl-azure-sc`.
-2. **Crear el Pipeline:** En Azure DevOps, crea un nuevo pipeline apuntando al archivo `pipelines/azure-pipelines.yml` de este repositorio.
-3. **Configurar el Backend de Terraform:** Crea un Storage Account en Azure llamado `tfstatestoragecoatl` dentro de un Resource Group `tfstate-rg` para guardar el estado.
-4. **Push & Deploy:** Al hacer merge a `main`, el pipeline ejecutará el stage de `Plan`. Tras la revisión, se ejecutará el `Apply`.
+1. **Configure the Service Connection:** In Azure DevOps, create a Service Connection to your Azure subscription named `coatl-azure-sc`. | En Azure DevOps, crea un Service Connection hacia tu suscripción de Azure llamado `coatl-azure-sc`.
+2. **Create the Pipeline:** In Azure DevOps, create a new pipeline pointing to the `pipelines/azure-pipelines.yml` file in this repository. | Crea un nuevo pipeline apuntando al archivo `pipelines/azure-pipelines.yml`.
+3. **Configure the Terraform Backend:** Create an Azure Storage Account named `tfstatestoragecoatl` inside a Resource Group `tfstate-rg` to store the state. | Crea un Storage Account en Azure llamado `tfstatestoragecoatl` dentro de `tfstate-rg` para el estado.
+4. **Push & Deploy:** Upon merging to `main`, the pipeline runs the `Plan` stage. After review, the `Apply` executes. | Al hacer merge a `main`, se ejecuta el `Plan`. Tras la revisión, se ejecutará el `Apply`.
 
 ---
-*Diseñado con foco en Seguridad, Confiabilidad y FinOps.*
+*Designed with a focus on Security, Reliability, and FinOps. | Diseñado con foco en Seguridad, Confiabilidad y FinOps.*

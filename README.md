@@ -107,6 +107,56 @@ r365-azure-finops-claude/
 3. **Configure the Terraform Backend:** Create an Azure Storage Account named `tfstatestoragecoatl` inside a Resource Group `tfstate-rg` to store the state. | Crea un Storage Account en Azure llamado `tfstatestoragecoatl` dentro de `tfstate-rg` para el estado.
 4. **Push & Deploy:** Upon merging to `main`, the pipeline runs the `Plan` stage. After review, the `Apply` executes. | Al hacer merge a `main`, se ejecuta el `Plan`. Tras la revisión, se ejecutará el `Apply`.
 
+
+## 📊 Phase 1: Token Observability & KQL Analytics | Observabilidad de Tokens y Analítica KQL
+
+To achieve real-time token tracking and chargebacks without introducing HTTP latency, we stream API request metrics asynchronously from APIM to Azure Monitor and Grafana. | Para lograr el seguimiento de tokens y chargebacks en tiempo real sin introducir latencia HTTP, transmitimos las métricas de APIM de forma asíncrona hacia Azure Monitor y Grafana.
+
+```mermaid
+graph LR
+    APIM["API Management Gateway"] -->|Asynchronous Streaming| EventHub["Azure Event Hubs"]
+    EventHub -->|Log Processing| LAW["Log Analytics Workspace"]
+    LAW -->|APM Analytics| AppInsights["Application Insights"]
+    LAW -->|Visualizations| Grafana["Azure Managed Grafana / Workbooks"]
+```
+
+### 1. APIM Logging Policy | Política de Logging en APIM
+The gateway extracts the token metadata (input, output, model, and department) and sends a JSON payload to Event Hubs: | El gateway extrae los metadatos de tokens (entrada, salida, modelo y departamento) y envía un payload JSON a Event Hubs:
+
+```xml
+<outbound>
+    <base />
+    <!-- Stream FinOps metrics asynchronously to Event Hubs | Transmite métricas FinOps asíncronamente a Event Hubs -->
+    <log-to-eventhub logger-id="finops-eventhub-logger">
+        @((string)context.Variables["finops-metric-payload"])
+    </log-to-eventhub>
+</outbound>
+```
+
+### 2. KQL FinOps Queries | Consultas KQL de FinOps
+Once streamed to Log Analytics, SREs run KQL queries to monitor cost and consumption: | Una vez transmitidos a Log Analytics, los SREs ejecutan consultas KQL para monitorear costos y consumo:
+
+*   **A. Estimated Spend in USD by Team (Claude 3.5 Sonnet) | Gasto Estimado en USD por Equipo:**
+    ```kql
+    ApiManagementGatewayLogs
+    | where timestamp > ago(30d)
+    | where Model == "claude-3-5-sonnet"
+    | extend CostInput = (InputTokens * 3.00) / 1000000
+    | extend CostOutput = (OutputTokens * 15.00) / 1000000
+    | extend TotalCostUSD = CostInput + CostOutput
+    | summarize TotalSpend = sum(TotalCostUSD) by Team
+    | render piechart
+    ```
+
+*   **B. Monitor API Gateway 429 Rate Limiting Triggers | Monitoreo de Bloqueos de Rate-Limit (429):**
+    ```kql
+    ApiManagementGatewayLogs
+    | where timestamp > ago(24h)
+    | where ResponseCode == 429
+    | summarize BlockCount = count() by Team, bin(timestamp, 1h)
+    | render timechart
+    ```
+
 ---
 
 ## 📈 Professional Pitch | Discurso Profesional
